@@ -67,9 +67,8 @@ game_specials = ['platforms', 'genres', 'releases', 'themes', 'images', 'similar
 
 def format_string(str_obj):
     str_obj = str_obj.replace('&', 'and')
-    str_obj = str_obj.replace('™', '')
     title_words = [v.translate(str.maketrans('', '', string.punctuation))
-                       .lower().strip() for v in re.sub('/|_|-|:', ' ', str_obj).split(' ')]
+                       .lower().strip() for v in re.sub('/|_|-|:|™|®', ' ', str_obj).split(' ')]
     title_words = [unicodedata.normalize('NFKD', v).encode('ASCII', 'ignore').decode('utf-8')
                    for v in title_words if v != '']
     return title_words
@@ -346,10 +345,15 @@ def get_steam_info(url):
 
         else:
             wanted_div = mydivs[0]
+        
         steam_critics = wanted_div.attrs['data-tooltip-html'].split('%')[0]
         steam_nb_users = int(wanted_div.find('span', {'class': 'responsive_hidden'})
                                 .text[1:-1].strip()[1:-1].replace(',', ''))
-        date = soup.find('div', {'class': 'date'}).text
+        
+        try:
+            date = soup.find('div', {'class': 'date'}).text
+        except AttributeError as _:
+            date = ''
 
         steam_genres = [d.text.replace('\t', '').replace('\r', '').replace('\n', '')
                     for d in soup.findAll('a', {'class': 'app_tag'})]
@@ -555,28 +559,31 @@ if __name__ == '__main__':
     sites = args.sites.split(',')
 
     for ind, line in enumerate(lines):
-        temp_line = line.replace('\n', '')
-        temp_list = temp_line.split('#')
-        temp_title = temp_list[0]
-        temp_url = temp_list[1]
-
         try:
+            temp_line = line.replace('\n', '')
+            temp_list = temp_line.split(' # ')
+            temp_title = temp_list[0]
+            temp_url = temp_list[2]
+        
+        
             ultimate_games_dict[temp_title] = {'title': temp_title}
             ultimate_text_dict[temp_title] = dict()
 
+            sites_success = ''
             for site in sites:
                 site_info = sites_funcs[site](temp_url)
                 if site_info[site+'-success']:
                     ultimate_games_dict[temp_title].update(site_info)
                 else:
                     ultimate_games_dict[temp_title][site+'-success'] = False
+                sites_success += site + ': ' + str(ultimate_games_dict[temp_title][site+'-success']) + ' # '
             if args.images:
                 image_count = get_images(ultimate_games_dict[temp_title])
             
-            print('Success:', ind, temp_title)
+            print('Success:', ind, temp_title, sites_success)
             
         except Exception as e:
-            print('Error:', temp_line, e)
+            print('Error:', temp_title, e)
         
         if 'giantbomb' in sites or 'metacritics' in sites:
             time.sleep(30)

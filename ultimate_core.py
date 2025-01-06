@@ -67,9 +67,8 @@ game_specials = ['platforms', 'genres', 'releases', 'themes', 'images', 'similar
 
 def format_string(str_obj):
     str_obj = str_obj.replace('&', 'and')
-    str_obj = str_obj.replace('™', '')
     title_words = [v.translate(str.maketrans('', '', string.punctuation))
-                       .lower().strip() for v in re.sub('/|_|-|:', ' ', str_obj).split(' ')]
+                       .lower().strip() for v in re.sub('/|_|-|:|™|®', ' ', str_obj).split(' ')]
     title_words = [unicodedata.normalize('NFKD', v).encode('ASCII', 'ignore').decode('utf-8')
                    for v in title_words if v != '']
     return title_words
@@ -562,7 +561,10 @@ def get_steam_info(url, score):
             steam_critics = wanted_div.attrs['data-tooltip-html'].split('%')[0]
             steam_nb_users = int(wanted_div.find('span', {'class': 'responsive_hidden'})
                                     .text[1:-1].strip()[1:-1].replace(',', ''))
-            date = soup.find('div', {'class': 'date'}).text
+            try:
+                date = soup.find('div', {'class': 'date'}).text
+            except AttributeError as _:
+                date = ''
 
             steam_genres = [d.text.replace('\t', '').replace('\r', '').replace('\n', '')
                         for d in soup.findAll('a', {'class': 'app_tag'})]
@@ -824,7 +826,7 @@ if __name__ == '__main__':
             if args.images:
                 image_count = get_images(ultimate_games_dict[temp_line])
             
-            print('Success:', ind, temp_line, ultimate_games_dict[temp_line]['htlb-main'])
+            print('Success:', ind, temp_line)
             
         except Exception as e:
             print(' Error:', temp_line, e)
