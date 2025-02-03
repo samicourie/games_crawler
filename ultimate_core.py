@@ -24,11 +24,12 @@ nb_images = 10
 my_key = 'f0673d2f0d082808075c28853ecf492fe82f67a2'
 rawg_key = '8a120bfae1b04e538ad87617801a5e2a'
 igdb_token = '1yvsizb2zp4q2grf4p4vxugwv6i3fn'
+igdb_token_2 = 'sdt51jvjg4ac9se90x5bv6gkuczuqk'
 igdb_client_id = 'yralty86hmbusapbic6c4d6mdfcr3r'
-headers = {'Client-ID': igdb_client_id, 'Authorization': 'Bearer ' + igdb_token}
+headers = {'Client-ID': igdb_client_id, 'Authorization': 'Bearer ' + igdb_token_2}
 
 gb = giantbomb.Api(my_key, 'API test')
-htlb_obj = HowLongToBeat()
+hltb = HowLongToBeat()
 wiki_obj = wikipediaapi.Wikipedia('Games DB', 'en')
 alphabet = list(string.ascii_uppercase)
 
@@ -191,7 +192,7 @@ def get_meta_url(title):
         url = base_url + new_title + '/?page=1&category=13'
 
         soup = get_soup(url)
-        search_results = soup.findAll('a', {'class': 'c-pageSiteSearch-results-item'})[:10]
+        search_results = soup.findAll('a', {'class': 'c-pageSiteSearch-results-item'})[:15]
         candidates = []
         urls = []
         for result in search_results:
@@ -263,18 +264,18 @@ def get_gameplay_time(title):
     candidates = []
     clean_title = title.replace('-', '')
     try:
-        htlb_games = htlb_obj.search(clean_title, similarity_case_sensitive=False)
-        for game in htlb_games:
+        hltb_games = hltb.search(clean_title, similarity_case_sensitive=False)
+        for game in hltb_games:
             if game.similarity > 0.7:
                 candidates.append(game.game_name)
 
-        best_candidate = htlb_games[get_best_match(candidates, title)[0]]
+        best_candidate = hltb_games[get_best_match(candidates, title)[0]]
         main = best_candidate.main_story
         main_extra = best_candidate.main_extra
         complete = best_candidate.completionist
     except Exception as e:
         pass
-    return {'htlb-main': main, 'htlb-main+': main_extra, 'htlb-complete': complete}
+    return {'hltb-main': main, 'hltb-main+': main_extra, 'hltb-complete': complete}
 
 
 def get_riot_url(title):
@@ -767,14 +768,14 @@ if __name__ == '__main__':
     sites_funcs = {'wikipedia': get_wiki_url, 'steam': get_steam_url, 'riot': get_riot_url,
                    'metacritics': get_meta_url, 
                    'igdb': search_igdb, 'giantbomb': get_giantbomb_info,
-                   'htlb': get_gameplay_time, 'rawg': get_rawg_info}
+                   'hltb': get_gameplay_time, 'rawg': get_rawg_info}
     crawl_funcs = {'wikipedia': get_wiki_info, 'steam': get_steam_info, 'riot': get_riot_info,
                   'metacritics': get_meta_info, 'igdb': get_igdb_info}
     
     parser = argparse.ArgumentParser(description='Description of your program')
     parser.add_argument('-i', '--input_file', type=str, help='Path to new games file', default='new_games.txt')
     parser.add_argument('-s', '--sites', type=str, help='site to crawl separated by (,)',
-                        default='wikipedia,steam,riot,igdb,giantbomb,rawg,htlb')
+                        default='wikipedia,steam,riot,igdb,giantbomb,rawg,hltb,metacritics')
     parser.add_argument('-m', '--images', type=bool, help='Whether to download game images or not (slow)', default=False)
     parser.add_argument('-o', '--output_prefix', type=str, help='Prefix of output files', default='new_games_')
     args = parser.parse_args()
@@ -802,13 +803,17 @@ if __name__ == '__main__':
             ultimate_games_dict[temp_line] = {'title': temp_line}
             ultimate_text_dict[temp_line] = dict()
 
+            print('Crawling for', temp_line)
             for site in sites:
                 if site in sites_funcs:
+                    print('Crawling', site)
                     ultimate_games_dict[temp_line].update(sites_funcs[site](temp_line))
-                    if 'giantbomb' in sites or 'metacritics' in sites:
-                        time.sleep(30)
-                    # else:
-                    #     time.sleep(2)
+            
+            if 'giantbomb' in sites or 'metacritics' in sites:
+                print('Sleeping ...')
+                time.sleep(30)
+            else:
+                time.sleep(1)
 
             sites_success = ''
             for site in sites:
@@ -832,6 +837,7 @@ if __name__ == '__main__':
             print(' Error:', temp_line, e)
         
         if 'giantbomb' in sites or 'metacritics' in sites:
+            print('Sleeping ...')
             time.sleep(30)
         else:
             time.sleep(1)
