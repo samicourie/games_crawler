@@ -3,13 +3,14 @@ from giantbomb import giantbomb
 from crawlers.crawler import Crawler
 
 from util.utility import get_best_match
+from util.config import GIANTBOMB_KEY
 
 
 class GiantbombCrawler(Crawler):
 
     def __init__(self):
         super().__init__()
-        self.giantbomb_key = 'f0673d2f0d082808075c28853ecf492fe82f67a2'
+        self.giantbomb_key = GIANTBOMB_KEY
         self.gb = giantbomb.Api(self.giantbomb_key, 'API test')
         self.names_dict = {'Giant Id': 'giantbomb-id', 'name': 'giantbomb-name', 'aliases': 'giantbomb-aliases', 'deck': 'giantbomb-intro',
                            'description': 'giantbomb-description', 'platforms': 'giantbomb-platforms', 'developers': 'giantbomb-developers',

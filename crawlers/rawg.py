@@ -3,12 +3,14 @@ import rawg
 import asyncio
 from crawlers.crawler import Crawler
 from util.utility import get_best_match
+from util.config import RAWG_KEY
+
 
 class RawgCrawler(Crawler):
 
     def __init__(self):
         super().__init__()
-        self.rawg_key = '8a120bfae1b04e538ad87617801a5e2a'
+        self.rawg_key = RAWG_KEY
 
     async def get_rawg_requests(self, title):
         temp_title = title

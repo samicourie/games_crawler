@@ -3,14 +3,15 @@ import requests
 from crawlers.crawler import Crawler
 from datetime import datetime
 from util.utility import get_best_match
+from util.config import IGDB_TOKEN, IGDB_CLIENT_SECRET, IGDB_CLIENT_ID
 
 class IGDBCrawler(Crawler):
 
     def __init__(self):
         super().__init__()
-        self.igdb_token = 'kdmmzwv5866imdn1i28brq3rzht31i'
-        self.igdb_client_id = 'jp6q5jcny08ncmuq7ioy3x4vvng0zu'
-        self.igdb_client_secret = '4bxqe32mv5uvo6bvrwsh15szm7lxr4'
+        self.igdb_token = IGDB_TOKEN
+        self.igdb_client_id = IGDB_CLIENT_ID
+        self.igdb_client_secret = IGDB_CLIENT_SECRET
         self.headers = {'Client-ID': self.igdb_client_id, 'Authorization': 'Bearer ' + self.igdb_token}
         self.igdb_categories = {0: 'Main Game', 1: 'DLC', 2: 'Expansion', 3: 'Bundle', 4: 'Standalone Expansion',
                                 5: 'Mod', 6: 'Episode', 7: 'Season', 8: 'Remake', 9: 'Remaster', 10: 'Expanded Game',
