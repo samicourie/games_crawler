@@ -23,10 +23,10 @@ json_list = []
 nb_images = 10
 my_key = 'f0673d2f0d082808075c28853ecf492fe82f67a2'
 rawg_key = '8a120bfae1b04e538ad87617801a5e2a'
-igdb_token = '1yvsizb2zp4q2grf4p4vxugwv6i3fn'
-igdb_token_2 = 'sdt51jvjg4ac9se90x5bv6gkuczuqk'
-igdb_client_id = 'yralty86hmbusapbic6c4d6mdfcr3r'
-headers = {'Client-ID': igdb_client_id, 'Authorization': 'Bearer ' + igdb_token_2}
+igdb_token = 'kdmmzwv5866imdn1i28brq3rzht31i'
+igdb_client_id = 'jp6q5jcny08ncmuq7ioy3x4vvng0zu'
+igdb_client_secret = '4bxqe32mv5uvo6bvrwsh15szm7lxr4'
+headers = {'Client-ID': igdb_client_id, 'Authorization': 'Bearer ' + igdb_token}
 
 gb = giantbomb.Api(my_key, 'API test')
 hltb = HowLongToBeat()
@@ -37,6 +37,7 @@ base_meta = 'https://www.metacritic.com'
 base_wiki = 'https://en.wikipedia.org'
 base_riot = 'https://en.riotpixels.com'
 base_hltb = 'https://howlongtobeat.com/game/'
+base_backloggd = 'https://backloggd.com'
 
 soup_headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
               'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -64,7 +65,7 @@ words_subs = {'1': ['i', 'one', '1'], 'one': ['i', 'one', '1'], 'i': ['i', 'one'
               '9': ['ix', 'nine', '9'], 'nine': ['ix', 'nine', '9'], 'ix': ['ix', 'nine', '9'],
               '10': ['x', 'ten', '10'], 'ten': ['x', 'ten', '10'], 'x': ['x', 'ten', '10']}
 
-game_specials = ['platforms', 'genres', 'releases', 'themes', 'images', 'similar_games']
+game_specials = ['platforms', 'genres', 'releases', 'themes', 'images']
 
 def format_string(str_obj):
     str_obj = str_obj.replace('&', 'and')
@@ -152,10 +153,9 @@ def get_steam_url(title):
         base_url = 'https://store.steampowered.com/search/?term='
         new_title = title.replace(' ', '+')
         url = base_url + new_title
-
         soup = get_soup(url)
         urls = []
-        search_results = soup.findAll('a', {'class':
+        search_results = soup.find_all('a', {'class':
                                                 ['search_result_row ds_collapse_flag', 'app_impression_tracked']})[:10]
         candidates = []
         for result in search_results:
@@ -172,7 +172,7 @@ def get_steam_url(title):
         edist_url = urls[best_edist_candidate[0]]
         edist_score = best_edist_candidate[1]
 
-    except Exception as _:
+    except Exception as e:
         success = False
 
     return {'steam-title': temp_title,
@@ -192,7 +192,7 @@ def get_meta_url(title):
         url = base_url + new_title + '/?page=1&category=13'
 
         soup = get_soup(url)
-        search_results = soup.findAll('a', {'class': 'c-pageSiteSearch-results-item'})[:15]
+        search_results = soup.find_all('a', {'class': 'c-pageSiteSearch-results-item'})[:15]
         candidates = []
         urls = []
         for result in search_results:
@@ -232,7 +232,7 @@ def get_wiki_url(title):
                    '+video+game&title=Special:Search&profile=advanced&fulltext=1&ns0=1'
 
         soup = get_soup(url)
-        search_results = soup.findAll('div', {'class': 'mw-search-result-heading'})[:10]
+        search_results = soup.find_all('div', {'class': 'mw-search-result-heading'})[:10]
         candidates = []
         urls = []
         for result in search_results:
@@ -276,6 +276,37 @@ def get_gameplay_time(title):
     except Exception as e:
         pass
     return {'hltb-main': main, 'hltb-main+': main_extra, 'hltb-complete': complete}
+
+
+def get_backloggd_url(title):
+    temp_title = title
+    score = 0
+    url = ''
+    success = True
+    try:
+        new_title = title.replace('-', ' ').strip()
+        new_title = re.sub(' +', ' ', new_title)
+        url = base_backloggd + '/search/games/' + new_title + '/'
+        soup = get_soup(url)
+        candidates_elems = soup.find('div', {'id': 'search-results'}).find_all('a')
+        candidates_a = []
+        for elem in candidates_elems:
+            img_elem = elem.find('img')
+            if img_elem is not None and 'alt' in img_elem.attrs:
+                candidates_a.append(elem) 
+        candidates_urls = [v.attrs['href'] for v in candidates_a]
+        candidates_titles = [v.find('img').attrs['alt'] for v in candidates_a]
+        best_candidate = get_best_match(candidates_titles, title)
+        temp_title = candidates_titles[best_candidate[0]]
+        score = best_candidate[1]
+        url = base_backloggd + candidates_urls[best_candidate[0]]
+
+    except Exception as _:
+        success = False
+
+    return {'backloggd-title': temp_title,
+            'backloggd-score': score,
+            'backloggd-url': url, 'backloggd-success': success}
 
 
 def get_riot_url(title):
@@ -413,6 +444,7 @@ def search_igdb(title, query=None):
     return {'igdb-title': best_search_name, 'igdb-url': best_search_id, 'igdb-score': best_score,
             'igdb-edist-title': best_edist_name, 'igdb-edist-url': best_edist_id, 'igdb-edist-score': best_edist_score, 'igdb-success': success}
 
+
 def get_igdb_info(game_id, score=0):
     igdb_dict = {'igdb-id': game_id, 'igdb-success': True}
     if score > 0.75:
@@ -463,8 +495,8 @@ def get_wiki_info(url, score):
     if score >= 0.7:
         soup = get_soup(url)
         try:
-            new_genre_index = [d.text for d in soup.findAll('th', {'class': 'infobox-label'})].index('Genre(s)')
-            new_genre = [d.text for d in soup.findAll('td', {'class': 'infobox-data'})][new_genre_index]
+            new_genre_index = [d.text for d in soup.find_all('th', {'class': 'infobox-label'})].index('Genre(s)')
+            new_genre = [d.text for d in soup.find_all('td', {'class': 'infobox-data'})][new_genre_index]
             wiki_genre = new_genre.replace(',', ';')
         except Exception as e:
             pass
@@ -553,7 +585,7 @@ def get_steam_info(url, score):
             else:
                 steam_summary = '#'
 
-            mydivs = soup.findAll('div', {'class': 'user_reviews_summary_row'})
+            mydivs = soup.find_all('div', {'class': 'user_reviews_summary_row'})
             if len(mydivs) > 2:
                 wanted_div = mydivs[1]
 
@@ -568,13 +600,13 @@ def get_steam_info(url, score):
                 date = ''
 
             steam_genres = [d.text.replace('\t', '').replace('\r', '').replace('\n', '')
-                        for d in soup.findAll('a', {'class': 'app_tag'})]
+                        for d in soup.find_all('a', {'class': 'app_tag'})]
             steam_genres = '; '.join(steam_genres)
 
-            steam_tags = soup.find('div', {'class': ['glance_tags', 'popular_tags']}).findAll('a')
+            steam_tags = soup.find('div', {'class': ['glance_tags', 'popular_tags']}).find_all('a')
             steam_tags = '; '.join([a.text.replace('\t', '').replace('\n', '') for a in steam_tags])
 
-            screenshot_divs = soup.findAll('div', {'class': 'screenshot_holder'})
+            screenshot_divs = soup.find_all('div', {'class': 'screenshot_holder'})
             for sc_shot_div in screenshot_divs:
                 image_src = sc_shot_div.find('a').attrs['href']
                 steam_images.append(image_src)
@@ -631,6 +663,31 @@ def get_meta_info(url, score):
     
     return {'metacritics-description': meta_description, 'metacritics-success': success,
             'metacritics-critics': critics, 'metacritics-users': users, 'metacritics-release-date': date}
+
+
+def get_backloggd_info(url, score):
+    backloggd_score = float(score)
+    backloggd_description = '#'
+    backloggd_rating = ''
+    split_ratings = ''
+    success = True
+
+    if backloggd_score >= 0.75:
+        try:
+            soup = get_soup(url)
+            backloggd_description = soup.find('div', {'id': 'collapseSummary'}).text
+            backloggd_rating = soup.find('div', {'id': 'game-rating'}).find('h1').text
+            side_content = soup.find('div', {'class': 'side-section'}).find_all('div', {'class': 'col px-0 top-tooltip'})
+            ratings = [v.attrs['data-tippy-content'] for v in side_content]
+            count_ratings = [v.split(' ★ ')[0] for v in ratings]
+            split_ratings = {v.split(' | ')[1]: v.split(' | ')[0] for v in count_ratings}
+        except Exception as _:
+            success = False
+    else:
+        success = False
+    
+    return {'backloggd-description': backloggd_description, 'backloggd-success': success, 
+            'backloggd-rating': backloggd_rating, 'backloggd-split-rating': split_ratings}
 
 
 def get_riot_info(url, score):
@@ -755,7 +812,10 @@ def generate_text(game_obj):
             str_obj += igdb_dict[key] + game_obj[key] + '\n'
     if str_obj != '':
         text_obj['text-igdb'] = 'IGDB: \n' + str_obj
-    
+
+    if game_obj.get('backloggd-description', '#') != '#':
+        text_obj['text-backloggd'] = 'Backloggd: \n' + game_obj['backloggd-description']  + '\n'
+
     return text_obj
 
 
@@ -766,16 +826,16 @@ if __name__ == '__main__':
     existed_games = []
 
     sites_funcs = {'wikipedia': get_wiki_url, 'steam': get_steam_url, 'riot': get_riot_url,
-                   'metacritics': get_meta_url, 
+                   'metacritics': get_meta_url, 'backloggd': get_backloggd_url,
                    'igdb': search_igdb, 'giantbomb': get_giantbomb_info,
                    'hltb': get_gameplay_time, 'rawg': get_rawg_info}
     crawl_funcs = {'wikipedia': get_wiki_info, 'steam': get_steam_info, 'riot': get_riot_info,
-                  'metacritics': get_meta_info, 'igdb': get_igdb_info}
+                  'metacritics': get_meta_info, 'igdb': get_igdb_info, 'backloggd': get_backloggd_info}
     
     parser = argparse.ArgumentParser(description='Description of your program')
     parser.add_argument('-i', '--input_file', type=str, help='Path to new games file', default='new_games.txt')
     parser.add_argument('-s', '--sites', type=str, help='site to crawl separated by (,)',
-                        default='wikipedia,steam,riot,igdb,giantbomb,rawg,hltb,metacritics')
+                        default='wikipedia,steam,igdb,giantbomb,rawg,hltb,metacritics,backloggd')
     parser.add_argument('-m', '--images', type=bool, help='Whether to download game images or not (slow)', default=False)
     parser.add_argument('-o', '--output_prefix', type=str, help='Prefix of output files', default='new_games_')
     args = parser.parse_args()
@@ -803,14 +863,14 @@ if __name__ == '__main__':
             ultimate_games_dict[temp_line] = {'title': temp_line}
             ultimate_text_dict[temp_line] = dict()
 
-            print('Crawling for', temp_line)
+            # print('Crawling for', temp_line)
             for site in sites:
                 if site in sites_funcs:
-                    print('Crawling', site)
+                    # print('Crawling', site)
                     ultimate_games_dict[temp_line].update(sites_funcs[site](temp_line))
             
             if 'giantbomb' in sites or 'metacritics' in sites:
-                print('Sleeping ...')
+                # print('Sleeping ...')
                 time.sleep(30)
             else:
                 time.sleep(1)
@@ -837,7 +897,7 @@ if __name__ == '__main__':
             print(' Error:', temp_line, e)
         
         if 'giantbomb' in sites or 'metacritics' in sites:
-            print('Sleeping ...')
+            # print('Sleeping ...')
             time.sleep(30)
         else:
             time.sleep(1)
